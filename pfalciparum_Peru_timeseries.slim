@@ -1,0 +1,136 @@
+//This script simulates a p falcipaurm population in Peru over a few generations.
+//Note that we are modeling a haploid population as diploid. So h=0.5 and N will be halved.
+//recombination and mutation rate is 0.
+//How to run:
+//slim pfalciparum_Peru_timeseries.slim -d "d_folder='/proj/johrilab/projects/PfalPeruSims/simulations/sample2018'" -d "d_repID='${repID}'" 
+
+initialize() {
+	initializeMutationRate(0);
+	initializeMutationType("m1", 0.5, "f", 0.0); //htp2 deletion -- neutral
+	initializeMutationType("m2", 0.5, "f", 0.0); //htp3 deletion -- neutral
+	initializeGenomicElementType("g1", c(m1,m2), c(1.0, 1.0));
+	initializeGenomicElement(g1, 0,1); //2 sites
+	initializeRecombinationRate(0);
+	writeFile(d_folder + "/mutation_frequencies/output" + d_repID + ".csv",
+		"generation,hrp2_only,hrp3_only,double_deletion,wildtype", append=F);
+}
+//Can delete this, but I wanted to write a function as a sanity check to look at starting mutation frequencies and log them over time so we can also compare to vcf/other calculations to verify 
+function (void)MutationFrequencies(object inds, integer total) {
+	//counter of each lineage to track mutation type
+	hrp2_only = 0;
+	hrp3_only = 0;
+	double_deletion = 0;
+	wildtype = 0;
+	
+	for (ind in inds) {
+		hasHrp2 = ind.containsMarkerMutation(m1, 0); //check if individual has hrp2 in position 0
+		hasHrp3 = ind.containsMarkerMutation(m2, 1); //check if individual has hrp3 in position 1
+		
+		if (hasHrp2 & hasHrp3) { //if individual has both hrp2 and hrp3, then it is a double deletion
+			double_deletion = double_deletion + 1;
+		} else if (hasHrp2 & !hasHrp3) { //if indiviudal has only hrp2
+			hrp2_only = hrp2_only + 1;
+		} else if (hasHrp3 & !hasHrp2) { //if individual has only hrp3
+			hrp3_only = hrp3_only + 1;
+		} else { //if individual has neither, then wildtype
+			wildtype = wildtype + 1;
+		}
+	}
+	
+	//make log file of frequencies
+	line = sim.cycle + "," + (hrp2_only/total) + "," + (hrp3_only/total) + "," + (double_deletion/total) + "," + (wildtype/total);
+	writeFile(d_folder + "/mutation_frequencies/output" + d_repID + ".csv", line, append=T);
+}
+
+
+// ancestral population (average 2003-2004)
+1 early()    { sim.addSubpop("p1", asInteger(96973/2)); //creating population; divided by 2 because we have diploid population
+	
+	/// STEP 1: Subset population into four groups by frequency
+	freqs = c(0.140896402, 0.220766129, 0.119804591, 0.518532878);  // frequencies averaged 2003-2004(double deletion, wildtype, hrp2, hrp3)
+	
+	inds = p1.haplosomes; //define by individual haploid genomes instead of diploid genomes
+	total = p1.individualCount*2; //number of haploid individuals
+	
+	groupSizes = asInteger(round(total * freqs)); //number of individuals in each group
+	
+	groupNames = c("double_deletion", "wildtype", "hrp2", "hrp3"); //define lineages
+	
+	// Create dictionary for groups to add individuals based on calculated sizes
+	groups = Dictionary();
+	
+	start = 0;
+	for (i in seqAlong(groupSizes)) { //iterate through group sizes
+		end = start + groupSizes[i]; //size of group
+		groups.setValue(groupNames[i], inds[(start):(end-1)]); //haploid genomes in index of groupsize have that lineage ID in dictionary
+		start = end;
+	}
+	
+	// STEP 2: Add mutations (made double deletion mutation the same as hrp2 and hrp3 mutations for simplicity)
+	vals_hrp2 = groups.getValue("hrp2"); //define individuals in hrp2 only 
+	vals_hrp3 = groups.getValue("hrp3"); //define individuals in hrp3 only
+	vals_dd   = groups.getValue("double_deletion"); //define individuals in double deletion group
+	
+	// create hrp2 mutation and add to hrp2 + double_deletion
+	mut_hrp2 = vals_hrp2[0].addNewDrawnMutation(m1, 0); //draw mutation on first individual
+	vals_hrp2.addMutations(mut_hrp2); //add mutation to hrp2 group
+	vals_dd.addMutations(mut_hrp2); //add mutation to double deletion group -- added these together because we want them to have the same mutation, otherwise it will show up as different m1 mutations in the vcf
+	
+	// create hrp3 mutation and add to hrp3 + double_deletion
+	mut_hrp3 = vals_hrp3[0].addNewDrawnMutation(m2, 1);
+	vals_hrp3.addMutations(mut_hrp3); // add mutation to hrp3 group
+	vals_dd.addMutations(mut_hrp3); //add mutation to double deletion group -- added these together because we want them to have the same mutation, otherwise it will show up as different m2 mutations in the vcf
+	
+	//STEP 3 (OPTIONAL): The mutations were added in order, if you are adding recombination (at some point), you may want to shuffle the individuals so they're not reproducing only with individuals next to them that have same mutation type
+	sample(p1.individuals, p1.individualCount);
+	
+	
+	//DEBUGGING: print group names, count, and frequency in population
+	for (name in groupNames) {
+		vals = groups.getValue(name);
+		nInds = vals.size();
+		prop = nInds / total;
+		catn(name + " | count: " + nInds + " | proportion: " + prop);
+	}
+	//another sanity check: calculate genotype frequencies directly with MutationFrequencies function
+	MutationFrequencies(inds, total);
+}
+
+late() {
+	//Optional: log proportions of individuals in each lineage across generations
+	inds = p1.haplosomes; //define by individual haploid genomes instead of diploid genomes
+	total = p1.individualCount*2; //number of haploid individuals
+	//another sanity check: calculate genotype frequencies directly
+	MutationFrequencies(inds, total);
+}
+
+
+//Note: we divide our population sizes by 2 since we have a diploid model (so 1 individual is actually 2)
+10 early()   { p1.setSubpopulationSize(asInteger(106400/2)); } // 2005
+19 early()   { p1.setSubpopulationSize(asInteger(71542/2)); }     // 2006  
+28 early()   { p1.setSubpopulationSize(asInteger(54783/2)); }     // 2007  
+37 early()   { p1.setSubpopulationSize(asInteger(31932/2)); }     // 2008  
+46 early()   { p1.setSubpopulationSize(asInteger(27561/2)); }     // 2009  
+55 early()   { p1.setSubpopulationSize(asInteger(16237/2)); }     // 2010  
+64 early()   { p1.setSubpopulationSize(asInteger(18606/2)); }     // 2011  
+73 early()   { p1.setSubpopulationSize(asInteger(28216/2)); }     // 2012  
+82 early()   { p1.setSubpopulationSize(asInteger(55904/2)); }     // 2013  
+91 early()   { p1.setSubpopulationSize(asInteger(73438/2)); }     // 2014  
+100 early()  { p1.setSubpopulationSize(asInteger(89217/2)); }     // 2015  
+109 early()  { p1.setSubpopulationSize(asInteger(107845/2)); }    // 2016  
+118 early()  { p1.setSubpopulationSize(asInteger(92877/2)); }     // 2017  
+127 early()  { p1.setSubpopulationSize(asInteger(66536/2)); }     // 2018  
+
+// Stop at end of 2018 (135 = 15 × 9 generations)
+135 late() {
+	//output final frequencies
+	inds = p1.haplosomes; //define by individual haploid genomes instead of diploid genomes
+	total = p1.individualCount*2; //number of haploid individuals
+	MutationFrequencies(inds, total);
+	
+	//Sample output: VCF and MS file
+	g = sample(p1.haplosomes, 38); //38 in 2018 
+	g.outputHaplosomesToMS(d_folder + "/sample2018/output" + d_repID + ".ms");//check this line for haplosomes
+	g.outputHaplosomesToVCF(d_folder + "/sample2018/output" + d_repID + ".vcf");
+	sim.simulationFinished();
+}
