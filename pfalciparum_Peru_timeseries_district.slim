@@ -1,8 +1,7 @@
 //This script simulates a p falcipaurm population in Peru over a few generations.
 //Note that we are modeling a haploid population
 //mutation rate is 0.
-//How to run under neutrality:
-//slim pfalciparum_Peru_timeseries_district.slim -d "d_folder='/proj/johrilab/projects/PfalPeruSims/simulations_district'" -d "d_repID='${repID}'" -d d_f_sel_hrp2=0.0 -d d_f_sel_hrp2=0.0 -d d_f_rec=0.5
+//Population sizes are determined using the district incidence rates in Iquitos, Punchana, and San Juan Bautista
 
 initialize() {
 	initializeChromosome(1, 2, type="H"); //haploid chromosome of length 2
