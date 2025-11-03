@@ -37,8 +37,7 @@ mkdir -p "${OUTPUT_FOLDER}/haplotype_frequencies"
 echo "Starting simulation ${repID} in ${OUTPUT_FOLDER}"
 echo "Current working directory: $(pwd)"
 
-# Run SLiM 
-# (single line — prevents Bash from misinterpreting float values as commands)
+# Run slim
 slim -d "d_folder='${OUTPUT_FOLDER}'" -d "d_repID=${repID}" -d "d_f_sel_hrp2=${SEL1}" -d "d_f_sel_hrp3=${SEL2}" "${SLIM_SCRIPT}"
 
 echo "Finished simulation ${repID}"
