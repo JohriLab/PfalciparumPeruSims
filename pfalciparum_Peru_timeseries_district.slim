@@ -46,9 +46,9 @@ function (void)HaplotypeFrequencies(object inds, integer total) {
 
 
 // ancestral population (average 2003-2004)
-1 early()    { sim.addSubpop("p1", asInteger(144)); //creating population; divided by 2 because we have diploid population
-	sim.addSubpop("p2", asInteger(2));	
-	p1.setCloningRate(0.95);//correspond to F=0.9
+1 early()    { sim.addSubpop("p1", asInteger(144)); //creating population
+	sim.addSubpop("p2", asInteger(2)); //adding dummy subpopulation so mutations don't fix internally
+	p1.setCloningRate(0.95);//correspond to Fws=0.95
 }
 
 1 late () {
