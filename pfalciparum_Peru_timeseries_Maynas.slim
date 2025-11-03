@@ -1,8 +1,7 @@
 //This script simulates a p falcipaurm population in Peru over a few generations.
 //Note that we are modeling a haploid population
 //mutation rate is 0.
-//How to run under neutrality:
-//slim pfalciparum_Peru_timeseries_district.slim -d "d_folder='/proj/johrilab/projects/PfalPeruSims/simulations_district'" -d "d_repID='${repID}'" -d d_f_sel_hrp2=0.0 -d d_f_sel_hrp2=0.0 -d d_f_rec=0.5
+//Population sizes are determined using the Maynas annual incidence rates 
 
 initialize() {
 	initializeChromosome(1, 2, type="H"); //haploid chromosome of length 2
@@ -47,9 +46,9 @@ function (void)HaplotypeFrequencies(object inds, integer total) {
 
 
 // ancestral population (average 2003-2004)
-1 early()    { sim.addSubpop("p1", asInteger(340)); //creating population; divided by 2 because we have diploid population
-	sim.addSubpop("p2", asInteger(2));	
-	p1.setCloningRate(0.95);//correspond to F=0.9
+1 early()    { sim.addSubpop("p1", asInteger(340)); //creating population
+	sim.addSubpop("p2", asInteger(2)); //create dummy subpopulation so mutations don't fix internally in Slim
+	p1.setCloningRate(0.95);//correspond to Fws=0.95
 }
 
 1 late () {
@@ -196,7 +195,7 @@ function (void)HaplotypeFrequencies(object inds, integer total) {
 // Stop at end of 2018 (135 = 15 × 9 generations)
 135 late() {
 	//output final frequencies
-	inds = sample(p1.haplosomes, 38); //define by individual haploid genomes instead of diploid genomes
+	inds = sample(p1.haplosomes, 38); //define by individual haploid genomes 
 	total = 38; //number of haploid individuals
 	HaplotypeFrequencies(inds, total);
 	//p1.outputHaplosomes(d_folder + d_repID);
