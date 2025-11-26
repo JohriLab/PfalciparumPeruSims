@@ -9,3 +9,5 @@ pfalciparum_Peru_timeseries_district.slim - Population size assumptions using Iq
 
 pfalciparum_Peru_timeseries_full.slim - Population size assumptions using Peru national annual incidence rates
 -SLURM SCRIPT: run_pfalciparum_Peru_timeseries_full.sh
+
+double_deletion_plot.R - Rscript to plot double deletion results for figure
